@@ -62,7 +62,19 @@ function clean_text(text)::String
     # TODO: colapsar espacios múltiples y hacer strip
     # text = ...
 
-    return text
+    new_text = text
+
+    for i in text
+        if i >= 65 && i <= 90
+        
+            new_text = i + 32
+
+        end
+    end
+
+    new_text = replace(text, "[^a-zA-Z0-9]" => " ")
+
+    return strip(new_text)
 end
 
 """
@@ -76,6 +88,13 @@ function tokenize(text)::Vector{String}
     # TODO:
     # Si cleaned está vacío, devolver String[]
     # En caso contrario, dividir con split(cleaned)
+
+    if cleaned == ""
+        return String[]
+    else
+        return split(cleaned)
+    end
+
     return String[]
 end
 
@@ -104,6 +123,20 @@ function load_dataset(csv_path::AbstractString)::DataFrame
     # Crear la columna label_num con 0 para ham y 1 para spam
     # Ejemplo orientativo:
     # df.label_num = [...]
+
+    labels = []
+
+    for i in df.Category
+        
+        if i == "ham"
+            push!(labels, 0)
+        else
+            push!(labels, 1)
+        end
+
+    end
+
+    df.label_num = labels
 
     return df
 end
