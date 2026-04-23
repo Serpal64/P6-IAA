@@ -220,9 +220,24 @@ function build_vocabulary(messages::Vector{String})
     # TODO:
     # Recorrer los mensajes, tokenizar y contar palabras
 
+    for m in messages
+        m_split = tokenize(m)
+        for p in m_split
+            counts[p] = get(counts, p, 0) + 1
+        end
+    end
+
     # TODO:
     words = String[]
     vocabulary = Dict{String, Int}()
+
+    for i in keys(counts)
+        push!(words,i)
+    end
+
+    for (index, word) in enumerate(words)
+        vocabulary[word] = index
+    end
 
     return vocabulary, words
 end
@@ -242,6 +257,22 @@ function vectorize_messages(messages::Vector{String}, vocabulary::Dict{String, I
     #   - contar las palabras que estén en el vocabulario;
     #   - guardar fila, columna y frecuencia;
     #   - crear al final la sparse matrix.
+
+    for (i, m) in enumerate(messages)
+        
+        local_counts = Dict{String, Int}()
+        for p in tokenize(m)
+            local_counts[p] = get(local_counts, p, 0) + 1
+        end
+
+        for (word, count) in local_counts
+            if haskey(vocabulary, word)
+                push!(row_idx, i)
+                push!(col_idx, vocabulary[word])
+                push!(values, count)ç
+            end
+        end
+    end
 
     return sparse(row_idx, col_idx, values, length(messages), length(vocabulary))
 end
@@ -429,6 +460,7 @@ function main()
     println()
 
     # 4. Entrenamiento
+    print("a")
     model = train_multinomial_nb(
         X_train_bow,
         y_train,
