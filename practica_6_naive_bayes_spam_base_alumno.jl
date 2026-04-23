@@ -184,23 +184,75 @@ function stratified_train_test_split(
     # TODO:
     ham_idx = Int[]
     spam_idx = Int[]
+    
+    for i in range(labels)
+        
+        if labels[i] == 0
+            push!(ham_idx, i)
+        else
+            push!(spam_idx, i)
+        end
+        
+    end
 
     # TODO:
     # shuffle!(...)
+    shuffle!(seed, ham_idx)
+    shuffle!(seed, spam_idx)
 
     # TODO:
-    n_test_ham = 0
-    n_test_spam = 0
+    n_test_ham = test_size * length(ham_idx)
+    n_test_spam = test_size * length(spam_idx)
 
     # TODO:
     test_idx = Int[]
+
+    for i in 1:n_test_ham
+
+        push!(test_idx, ham_idx[i])
+
+    end
+
+    for i in 1:n_test_spam
+
+        push!(test_idx, spam_idx[i])
+
+    end
+
     train_idx = Int[]
+ 
+    for i in n_test_ham:length(ham_idx)
+
+        push!(train_idx, ham_idx[i])
+
+    end
+
+    for i in n_test_spam:length(spam_idx)
+
+        push!(train_idx, ham_idx[i])
+
+    end
+    
 
     # TODO:
     X_train = String[]
     X_test = String[]
     y_train = Int[]
     y_test = Int[]
+
+    for i in test_idx
+        
+        push!(X_test, messages[i])
+        push!(y_test, labels[i])
+
+    end
+
+    for i in train_idx
+
+        push!(X_train, messages[i])
+        push!(y_train, labels[i])
+
+    end
 
     return X_train, X_test, y_train, y_test
 end
