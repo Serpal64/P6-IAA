@@ -185,7 +185,7 @@ function stratified_train_test_split(
     ham_idx = Int[]
     spam_idx = Int[]
     
-    for i in range(labels)
+    for i = 1:length(labels)
         
         if labels[i] == 0
             push!(ham_idx, i)
@@ -197,12 +197,12 @@ function stratified_train_test_split(
 
     # TODO:
     # shuffle!(...)
-    shuffle!(seed, ham_idx)
-    shuffle!(seed, spam_idx)
+    shuffle!(ham_idx)
+    shuffle!(spam_idx)
 
     # TODO:
-    n_test_ham = test_size * length(ham_idx)
-    n_test_spam = test_size * length(spam_idx)
+    n_test_ham = floor(Int, test_size * length(ham_idx))
+    n_test_spam = floor(Int, test_size * length(spam_idx))
 
     # TODO:
     test_idx = Int[]
