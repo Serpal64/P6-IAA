@@ -62,17 +62,9 @@ function clean_text(text)::String
     # TODO: colapsar espacios múltiples y hacer strip
     # text = ...
 
-    new_text = text
+    new_text = lowercase(text)
 
-    for i in text
-        if i >= 65 && i <= 90
-        
-            new_text = i + 32
-
-        end
-    end
-
-    new_text = replace(text, "[^a-zA-Z0-9]" => " ")
+    new_text = replace(new_text, r"[^a-z0-9]" => " ")
 
     return strip(new_text)
 end
@@ -222,15 +214,15 @@ function stratified_train_test_split(
 
     train_idx = Int[]
  
-    for i in n_test_ham:length(ham_idx)
+    for i in (n_test_ham + 1):length(ham_idx)
 
         push!(train_idx, ham_idx[i])
 
     end
 
-    for i in n_test_spam:length(spam_idx)
+    for i in (n_test_spam + 1):length(spam_idx)
 
-        push!(train_idx, ham_idx[i])
+        push!(train_idx, spam_idx[i])
 
     end
     
@@ -322,7 +314,7 @@ function vectorize_messages(messages::Vector{String}, vocabulary::Dict{String, I
             if haskey(vocabulary, word)
                 push!(row_idx, i)
                 push!(col_idx, vocabulary[word])
-                push!(values, count)ç
+                push!(values, count)
             end
         end
     end
@@ -353,28 +345,28 @@ function train_multinomial_nb(
     vocab_size = size(X_train, 2)
 
     # TODO:
-    ham_rows = Int[]
-    spam_rows = Int[]
+    ham_rows = findall(y_train .== 0)
+    spam_rows = findall(y_train .== 1)
 
     # TODO:
-    ham_counts = zeros(Int, vocab_size)
-    spam_counts = zeros(Int, vocab_size)
+    ham_counts = vec(sum(X_train[ham_rows, :], dims=1))
+    spam_counts = vec(sum(X_train[spam_rows, :], dims=1))
 
     # TODO:
-    total_ham_tokens = 0
-    total_spam_tokens = 0
+    total_ham_tokens = sum(ham_counts)
+    total_spam_tokens = sum(spam_counts)
 
     # TODO:
-    p_ham = 0.0
-    p_spam = 0.0
-    class_log_prior = zeros(2)
+    p_ham = length(ham_rows) / n_docs
+    p_spam = length(spam_rows) / n_docs
+    class_log_prior = [log(p_ham), log(p_spam)]
 
     # TODO:
-    prob_word_given_ham = zeros(vocab_size)
-    prob_word_given_spam = zeros(vocab_size)
+    prob_word_given_ham = log.((ham_counts .+ alpha) ./ (total_ham_tokens + alpha * vocab_size))
+    prob_word_given_spam = log.((spam_counts .+ alpha) ./ (total_spam_tokens + alpha * vocab_size))
 
     # TODO:
-    feature_log_prob = zeros(2, vocab_size)
+    feature_log_prob = vcat(prob_word_given_ham', prob_word_given_spam')
 
     return MultinomialNBModel(
         alpha,
@@ -395,12 +387,16 @@ function predict_log_proba(model::MultinomialNBModel, X::SparseMatrixCSC{Int, In
     # TODO:
     # Para cada documento y para cada clase:
     # score = log prior + suma(frecuencia * log probabilidad)
+    scores[:, 1] = model.class_log_prior[1] .+ X * model.feature_log_prob[1, :]
+    scores[:, 2] = model.class_log_prior[2] .+ X * model.feature_log_prob[2, :]
     return scores
 end
 
 function softmax_row(log_scores::AbstractVector{<:Real})
     # TODO:
     # Implementar softmax estable numéricamente
+    m = maximum(log_scores)
+    exp_scores = exp.(log_scores .- m)
     return zeros(Float64, length(log_scores))
 end
 
@@ -410,6 +406,9 @@ function predict_proba(model::MultinomialNBModel, X::SparseMatrixCSC{Int, Int})
 
     # TODO:
     # Aplicar softmax_row a cada fila
+    for i in 1:size(log_scores, 1)
+        probs[i, :] = softmax_row(log_scores[i, :])
+    end
     return probs
 end
 
@@ -418,7 +417,7 @@ function predict(model::MultinomialNBModel, X::SparseMatrixCSC{Int, Int})
 
     # TODO:
     # Devolver 0 para ham y 1 para spam según la probabilidad mayor
-    return Int[]
+    return [probs[i, 1] > probs[i, 2] ? 0 : 1 for i in 1:size(probs, 1)]
 end
 
 # ============================================================================
@@ -463,6 +462,7 @@ function get_top_spam_words(model::MultinomialNBModel; top_n::Int=5)
     # TODO:
     # Comparar logP(word|spam) y logP(word|ham)
     # Ordenar por la diferencia
+    n = length(messages)
     return DataFrame(
         word = String[],
         logP_word_spam = Float64[],
@@ -510,6 +510,7 @@ function main()
 
     # TODO:
     # Mostrar tamaño del vocabulario
+    println("Tamaño del vocabulario: ", length(vocabulary))
     println()
 
     # 4. Entrenamiento
@@ -530,6 +531,9 @@ function main()
     # TODO:
     # Convertir model.class_log_prior a probabilidades con exp.(...)
     # e imprimir P(ham) y P(spam)
+    probs = exp.(model.class_log_prior)
+    println("Probabilidad de ser HAM (legítimo): ", round(probs[1] * 100, digits=2), "%")
+    println("Probabilidad de ser SPAM: ", round(probs[2] * 100, digits=2), "%")
     println()
 
     # 6. Evaluación
