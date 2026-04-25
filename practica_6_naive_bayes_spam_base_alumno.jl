@@ -120,7 +120,7 @@ function load_dataset(csv_path::AbstractString)::DataFrame
     labels = []
 
     for i in df.Category
-        
+
         if i == "ham"
             push!(labels, 0)
         else
@@ -177,15 +177,15 @@ function stratified_train_test_split(
     # TODO:
     ham_idx = Int[]
     spam_idx = Int[]
-    
+
     for i = 1:length(labels)
-        
+
         if labels[i] == 0
             push!(ham_idx, i)
         else
             push!(spam_idx, i)
         end
-        
+
     end
 
     # TODO:
@@ -213,7 +213,7 @@ function stratified_train_test_split(
     end
 
     train_idx = Int[]
- 
+
     for i in (n_test_ham + 1):length(ham_idx)
 
         push!(train_idx, ham_idx[i])
@@ -225,7 +225,7 @@ function stratified_train_test_split(
         push!(train_idx, spam_idx[i])
 
     end
-    
+
 
     # TODO:
     X_train = String[]
@@ -234,7 +234,7 @@ function stratified_train_test_split(
     y_test = Int[]
 
     for i in test_idx
-        
+
         push!(X_test, messages[i])
         push!(y_test, labels[i])
 
@@ -304,7 +304,7 @@ function vectorize_messages(messages::Vector{String}, vocabulary::Dict{String, I
     #   - crear al final la sparse matrix.
 
     for (i, m) in enumerate(messages)
-        
+
         local_counts = Dict{String, Int}()
         for p in tokenize(m)
             local_counts[p] = get(local_counts, p, 0) + 1
@@ -397,7 +397,7 @@ function softmax_row(log_scores::AbstractVector{<:Real})
     # Implementar softmax estable numéricamente
     m = maximum(log_scores)
     exp_scores = exp.(log_scores .- m)
-    return zeros(Float64, length(log_scores))
+    return exp_scores ./ sum(exp_scores)
 end
 
 function predict_proba(model::MultinomialNBModel, X::SparseMatrixCSC{Int, Int})
@@ -427,7 +427,26 @@ end
 function confusion_matrix_binary(y_true::Vector{Int}, y_pred::Vector{Int})
     # TODO:
     # Calcular TN, FP, FN y TP
-    return [0 0; 0 0]
+
+    TN, FP, FN, TP = 0, 0, 0, 0
+
+    for truth in y_true
+        for pred in y_pred
+
+            if truth == 1 && pred == 1
+                TP += 1
+            elseif truth == 1 && pred == 0
+                FN += 1
+            elseif truth == 0 && pred == 1
+                FP += 1
+            else
+                TN += 1
+            end
+
+        end
+    end
+
+    return [TN FP; FN TP]
 end
 
 safe_div(num, den) = den == 0 ? 0.0 : num / den
@@ -440,6 +459,32 @@ function print_classification_report(y_true::Vector{Int}, y_pred::Vector{Int})
     # Calcular precision, recall y F1 para ham y spam
     # Calcular accuracy
     # Imprimirlo con formato legible
+
+    tn, fp = cm[1, 1], cm[1, 2]
+    fn, tp = cm[2, 1], cm[2, 2]
+
+    spam_precision = safe_div(tp, tp + fp)
+    spam_recall = safe_div(tp, tp + fn)
+    spam_f1 = safe_div(2 * spam_precision * spam_recall, spam_precision + spam_recall)
+
+    ham_precision = safe_div(tn, tn + fn)
+    ham_recall = safe_div(tn, tn + fp)
+    ham_f1 = safe_div(2 * ham_precision * ham_recall, ham_precision + ham_recall)
+
+    accuracy = safe_div(tp+tn, tn+tp+fp+fn)
+
+    println("\tPrecision\t\t|\tRecall\t\t\t|\tF1")
+    println("Spam:\t",spam_precision,"\t\t",spam_recall,"\t\t",spam_f1)
+    println("Ham:\t",ham_precision,"\t\t",ham_recall,"\t\t",ham_f1)
+    println()
+
+    println("Accuracy = ",accuracy)
+    println()
+
+    println("Matriz de confusión:")
+    println("TN = ",cm[1, 1],"\tFP = ",cm[1, 2])
+    println("FN = ",cm[2, 1],"\tTP = ",cm[2, 2])
+    println()
 
     return cm
 end
@@ -462,23 +507,46 @@ function get_top_spam_words(model::MultinomialNBModel; top_n::Int=5)
     # TODO:
     # Comparar logP(word|spam) y logP(word|ham)
     # Ordenar por la diferencia
-    n = length(messages)
+
+    spam_logP = model.feature_log_prob[1, :]
+    ham_logP = model.feature_log_prob[2, :]
+    cmp = spam_logP .- ham_logP
+
+    indx = sortperm(cmp)[1:top_n]
+
     return DataFrame(
-        word = String[],
-        logP_word_spam = Float64[],
-        logP_word_ham = Float64[],
-        spam_minus_ham = Float64[]
+        word = model.index_to_word[indx],
+        logP_word_spam = spam_logP[indx],
+        logP_word_ham = ham_logP[indx],
+        spam_minus_ham = cmp[indx]
     )
 end
 
 function classify_custom_messages(messages::Vector{String}, model::MultinomialNBModel)
     # TODO:
     # Vectorizar mensajes, obtener probabilidades y etiquetas
+
+    vec_mess = vectorize_messages(messages, model.vocabulary)
+    probabilities = predict_proba(model, vec_mess)
+    preds = predict(model, vec_mess)
+
+    labels = []
+
+    for i in preds
+    
+        if i == 0
+            push!(labels, "ham")
+        else
+            push!(labels, "spam")
+        end
+
+    end
+
     return DataFrame(
         message = messages,
-        predicted_label = String[],
-        P_ham = Float64[],
-        P_spam = Float64[]
+        predicted_label = labels,
+        P_ham = probabilities[:, 1],
+        P_spam = probabilities[:, 2]
     )
 end
 
@@ -575,6 +643,11 @@ function main()
         "cuando no ha aparecido en el entrenamiento y cómo ayuda el " *
         "suavizado de Laplace en ese caso."
     )
+
+
+    oferta_mes = String[]
+    push!(oferta_mes, "oferta")
+    println("Probabilidad de que el mensaje con oferta sea spam : ",predict_proba(model, vectorize_messages(oferta_mes, model.vocabulary)))
 end
 
 main()
