@@ -83,11 +83,13 @@ end
 Divide un texto en palabras.
 """
 function tokenize(text)::Vector{String}
-    cleaned = clean_text(text)
+
 
     # TODO:
     # Si cleaned está vacío, devolver String[]
     # En caso contrario, dividir con split(cleaned)
+
+    cleaned = clean_text(text)
 
     if cleaned == ""
         return String[]
@@ -95,7 +97,6 @@ function tokenize(text)::Vector{String}
         return split(cleaned)
     end
 
-    return String[]
 end
 
 """
