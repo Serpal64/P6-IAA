@@ -430,19 +430,15 @@ function confusion_matrix_binary(y_true::Vector{Int}, y_pred::Vector{Int})
 
     TN, FP, FN, TP = 0, 0, 0, 0
 
-    for truth in y_true
-        for pred in y_pred
-
-            if truth == 1 && pred == 1
-                TP += 1
-            elseif truth == 1 && pred == 0
-                FN += 1
-            elseif truth == 0 && pred == 1
-                FP += 1
-            else
-                TN += 1
-            end
-
+    for (t, p) in zip(y_true, y_pred)
+        if t == 0 && p == 0
+            TN += 1
+        elseif t == 0 && p == 1
+            FP += 1
+        elseif t == 1 && p == 0
+            FN += 1
+        elseif t == 1 && p == 1
+            TP += 1
         end
     end
 
@@ -572,6 +568,11 @@ function main()
     X_train_bow = vectorize_messages(X_train, vocabulary)
     X_test_bow = vectorize_messages(X_test, vocabulary)
 
+    println("Primera fila de mensajes sin procesar: ",X_train[:1, :])
+    println()
+    println("Primera fila de mensajes procesados: ", X_train_bow[:1, :])
+    println()
+
     println(repeat("=", 80))
     println("INFORMACIÓN DEL VOCABULARIO")
     println(repeat("=", 80))
@@ -582,7 +583,6 @@ function main()
     println()
 
     # 4. Entrenamiento
-    print("a")
     model = train_multinomial_nb(
         X_train_bow,
         y_train,
@@ -603,6 +603,8 @@ function main()
     println("Probabilidad de ser HAM (legítimo): ", round(probs[1] * 100, digits=2), "%")
     println("Probabilidad de ser SPAM: ", round(probs[2] * 100, digits=2), "%")
     println()
+
+
 
     # 6. Evaluación
     y_pred = predict(model, X_test_bow)
@@ -646,8 +648,8 @@ function main()
 
 
     oferta_mes = String[]
-    push!(oferta_mes, "oferta")
-    println("Probabilidad de que el mensaje con oferta sea spam : ",predict_proba(model, vectorize_messages(oferta_mes, model.vocabulary)))
+    push!(oferta_mes, "You just won 100 dollars !")
+    println("Probabilidad de que el mensaje sea spam : ",predict_proba(model, vectorize_messages(oferta_mes, model.vocabulary)))
 end
 
 main()
