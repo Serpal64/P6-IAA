@@ -479,7 +479,7 @@ function print_classification_report(y_true::Vector{Int}, y_pred::Vector{Int})
 
     println("Matriz de confusión:")
     println("TN = ",cm[1, 1],"\tFP = ",cm[1, 2])
-    println("FN = ",cm[2, 1],"\tTP = ",cm[2, 2])
+    println("FN = ",cm[2, 1],"\t\tTP = ",cm[2, 2])
     println()
 
     return cm
@@ -627,8 +627,11 @@ function main()
     custom_messages = [
         "Hi, are we still meeting tomorrow at the library?",
         "Congratulations! You have won a free vacation. Claim your prize now!",
-        "Hello, we have a special offer for you if you reply today."
-    ]
+        "Hello, we have a special offer for you if you reply today.",
+        "Hello, can we meet at the mall? I'm really looking for a date together",
+        "Tired of waiting for the new iphone 16? Click here to gain it for free!",
+        "Hey, i just sent you the money i owed you. Check your bank account"
+    ] 
 
     println(repeat("=", 80))
     println("CLASIFICACIÓN DE MENSAJES DE PRUEBA")
